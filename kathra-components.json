@@ -1,0 +1,113 @@
+[
+    {
+        "componentName": "kathra-sourcemanager",
+        "description": "Create and manage source repositories",
+        "version": "1.0.0-RC-SNAPSHOT",
+        "implementationName": "kathra-sourcemanager-gitlab",
+        "gitHost": "git.kathra.org",
+        "api" : "KATHRA/kathra-services/kathra-sourcemanager/kathra-sourcemanager-api",
+        "model" : "KATHRA/kathra-services/kathra-sourcemanager/kathra-sourcemanager-model",
+        "interface" : "KATHRA/kathra-services/kathra-sourcemanager/kathra-sourcemanager-interface",
+        "client" : "KATHRA/kathra-services/kathra-sourcemanager/kathra-sourcemanager-client",
+        "implementation" : "KATHRA/kathra-services/kathra-sourcemanager/kathra-sourcemanager-gitlab"
+    }
+    ,
+    {
+        "componentName": "kathra-pipelinemanager",
+        "description": "Create CI/CD Pipelines and run jobs",
+        "version": "1.0.0-RC-SNAPSHOT",
+        "implementationName": "kathra-pipelinemanager-jenkins",
+        "gitHost": "git.kathra.org",
+        "api" : "KATHRA/kathra-services/kathra-pipelinemanager/kathra-pipelinemanager-api",
+        "model" : "KATHRA/kathra-services/kathra-pipelinemanager/kathra-pipelinemanager-model",
+        "interface" : "KATHRA/kathra-services/kathra-pipelinemanager/kathra-pipelinemanager-interface",
+        "client" : "KATHRA/kathra-services/kathra-pipelinemanager/kathra-pipelinemanager-client",
+        "implementation" : "KATHRA/kathra-services/kathra-pipelinemanager/kathra-pipelinemanager-jenkins"
+    }
+    ,
+    {
+        "componentName": "kathra-binaryrepositorymanager",
+        "description": "Create, update and delete KATHRA's resources",
+        "version": "1.0.0-RC-SNAPSHOT",
+        "implementationName": "kathra-binaryrepositorymanager-harbor",
+        "gitHost": "git.kathra.org",
+        "api" : "KATHRA/kathra-services/kathra-binaryrepositorymanager/kathra-binaryrepositorymanager-api",
+        "model" : "KATHRA/kathra-services/kathra-binaryrepositorymanager/java/kathra-binaryrepositorymanager-model",
+        "interface" : "KATHRA/kathra-services/kathra-binaryrepositorymanager/java/kathra-binaryrepositorymanager-interface",
+        "client" : "KATHRA/kathra-services/kathra-binaryrepositorymanager/java/kathra-binaryrepositorymanager-client",
+        "implementation" : "KATHRA/kathra-services/kathra-binaryrepositorymanager/java/kathra-binaryrepositorymanager-harbor"
+    }
+    ,
+    {
+        "componentName": "kathra-usermanager",
+        "description": "Core features",
+        "version": "1.0.0-RC-SNAPSHOT",
+        "implementationName": "kathra-usermanager-keycloak",
+        "gitHost": "git.kathra.org",
+        "api" : "KATHRA/kathra-services/kathra-usermanager/kathra-usermanager-api",
+        "model" : "KATHRA/kathra-services/kathra-usermanager/java/kathra-usermanager-model",
+        "interface" : "KATHRA/kathra-services/kathra-usermanager/java/kathra-usermanager-interface",
+        "client" : "KATHRA/kathra-services/kathra-usermanager/java/kathra-usermanager-client",
+        "implementation" : "KATHRA/kathra-services/kathra-usermanager/java/kathra-usermanager-keycloak"
+    }
+    ,
+    {
+        "componentName": "kathra-resourcemanager",
+        "description": "Manage OCI repositories",
+        "version": "1.0.0-RC-SNAPSHOT",
+        "implementationName": "kathra-resourcemanager-arangodb",
+        "gitHost": "git.kathra.org",
+        "api" : "KATHRA/kathra-services/kathra-resourcemanager/kathra-resourcemanager-api",
+        "interface" : "KATHRA/kathra-services/kathra-resourcemanager/java/kathra-resourcemanager-interface",
+        "client" : "KATHRA/kathra-services/kathra-resourcemanager/java/kathra-resourcemanager-client",
+        "implementation" : "KATHRA/kathra-services/kathra-resourcemanager/java/kathra-resourcemanager-arangodb"
+    }
+    ,
+    {
+        "componentName": "kathra-catalogmanager",
+        "description": "Manage users and groups from OpenID Connect",
+        "version": "1.0.0-RC-SNAPSHOT",
+        "implementationName": "kathra-catalogmanager-kube",
+        "gitHost": "git.kathra.org",
+        "api" : "KATHRA/kathra-services/kathra-catalogmanager/kathra-catalogmanager-api",
+        "interface" : "KATHRA/kathra-services/kathra-catalogmanager/kathra-catalogmanager-interface",
+        "client" : "KATHRA/kathra-services/kathra-catalogmanager/kathra-catalogmanager-client",
+        "implementation" : "KATHRA/kathra-services/kathra-catalogmanager/kathra-catalogmanager-kube"
+    }
+    ,
+    {
+        "componentName": "kathra-codegen",
+        "description": "Generate source code and boostrap OpenApi's projects",
+        "version": "1.0.0-RC-SNAPSHOT",
+        "implementationName": "kathra-codegen-swagger",
+        "gitHost": "git.kathra.org",
+        "api" : "KATHRA/kathra-services/kathra-codegen/kathra-codegen-api",
+        "interface" : "KATHRA/kathra-services/kathra-codegen/java/kathra-codegen-interface",
+        "client" : "KATHRA/kathra-services/kathra-codegen/java/kathra-codegen-client",
+        "implementation" : "KATHRA/kathra-services/kathra-codegen/java/kathra-codegen-swagger"
+    }
+    ,
+    {
+        "componentName": "kathra-usersync",
+        "description": "Synchronize users, groups and permissions for pipelines, source repositories and binaries repositories",
+        "version": "1.0.0-RC-SNAPSHOT",
+        "implementationName": "kathra-usersync",
+        "gitHost": "git.kathra.org",
+        "api" : "KATHRA/kathra-services/kathra-synchromanager/kathra-synchromanager-api",
+        "interface" : "KATHRA/kathra-services/kathra-synchromanager/java/kathra-synchromanager-interface",
+        "client" : "KATHRA/kathra-services/kathra-synchromanager/java/kathra-synchromanager-client",
+        "implementation" : "KATHRA/kathra-services/kathra-synchromanager/java/kathra-users-synchronizer"
+    }
+    ,
+    {
+        "componentName": "kathra-deploymanager",
+        "description": "Deploy components into OCI runtimes environments",
+        "version": "1.0.0-RC-SNAPSHOT",
+        "implementationName": "kathra-deploymanager",
+        "gitHost": "git.kathra.org",
+        "api" : "KATHRA/kathra-services/kathra-deploymanager/kathra-deploymanager-api",
+        "interface" : "KATHRA/kathra-services/kathra-deploymanager/java/kathra-deploymanager-interface",
+        "implementation" : "KATHRA/kathra-services/kathra-deploymanager/java/kathra-deploymanager-k8s"
+    }
+    ]
+    

@@ -1,0 +1,40 @@
+swagger: '2.0'
+info:
+  description: Run
+  title: Run
+  version: 1.0.0
+  x-groupId: fr.my-team
+  x-artifactName: run-example
+
+paths:
+  /run/{name}:
+    post:
+      summary: Generate run
+      description: Generates a run message.
+      operationId: postRun
+      produces:
+        - application/json
+      responses:
+        200:
+          description: Run response
+          schema:
+            $ref: "#/definitions/Run"
+      parameters:
+        - name: name
+          in: path
+          description: Name run.
+          required: true
+          type: string
+
+definitions:
+  Run:
+    type: "object"
+    properties:
+      id:
+        type: "string"
+      status:
+        type: "string"
+      date_begin:
+        type: "string"
+      date_end:
+        type: "string"
