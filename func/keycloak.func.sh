@@ -16,6 +16,8 @@ function getKeycloakToken() {
     local access_token=$(grep "access_token" < $TEMP_DIRECTORY/getKeycloakToken.token | sed 's/.*\"access_token\":\"\([^\"]*\)\".*/\1/g')
     printDebug "ACCESS TOKEN IS \"$access_token\"";
     echo $access_token > $out
+    [ "$access_token" == "" ] && printError "Unable to get token" && return 1
+    return 0
 }
 
 export -f getKeycloakToken

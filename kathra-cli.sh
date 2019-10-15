@@ -8,13 +8,15 @@
 
 export SCRIPT_DIRECTORY="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 export TEMP_DIRECTORY=/tmp/kathra-cli/
+export KATHRA_CONTEXT_FILE=$HOME/.kathra-context
 [ ! -d $TEMP_DIRECTORY ] && mkdir $TEMP_DIRECTORY
 
+. $SCRIPT_DIRECTORY/func/imports.sh
 
-. $SCRIPT_DIRECTORY/conf.sh
-
+printDebug "Context file: $KATHRA_CONTEXT_FILE"
 
 function show_help() {
+    printInfo "login --username=<login> --password=<password> --host=<default:$(readEntryIntoFile "$KATHRA_CONTEXT_FILE" "KEYCLOAK_HOST")>"
     printInfo "get components : list components"
     printInfo "get components <uuid> : list resource with details"
     printInfo "create components <swagger-filePath> <component's name> <team's name> <component's description> : add a new component with apiversion from swagger file"
@@ -33,6 +35,10 @@ function show_help() {
     return 0
 }
 
+findInArgs '--help' $* > /dev/null && show_help && exit 0
+findInArgs '-h' $* > /dev/null && show_help && exit 0
+
+. $SCRIPT_DIRECTORY/conf.sh
 
 declare verb=$1
 declare resourceType=$2

@@ -182,7 +182,6 @@ export -f defineResourceWithReadyStatus
 
 function printAsArray() {
     cat -
-
 }
 export -f printAsArray
 
@@ -197,7 +196,5 @@ function findInArgs() {
         [ "${key}" == "${keyToFind}" ] && echo $value && return 0
         shift
     done
-
     return 1
-
 }

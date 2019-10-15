@@ -8,8 +8,12 @@
 
 export SCRIPT_DIRECTORY="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 export TEMP_DIRECTORY=/tmp/kathra-cli/
+export KATHRA_CONTEXT_FILE=$HOME/.kathra-context
 [ ! -d $TEMP_DIRECTORY ] && mkdir $TEMP_DIRECTORY
 
+. $SCRIPT_DIRECTORY/func/imports.sh
+
+printDebug "Context file: $KATHRA_CONTEXT_FILE"
 
 . $SCRIPT_DIRECTORY/conf.sh
 
