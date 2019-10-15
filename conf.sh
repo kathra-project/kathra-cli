@@ -1,16 +1,6 @@
 #!/bin/bash
 
-. $SCRIPT_DIRECTORY/func/createComponent.func.sh
-. $SCRIPT_DIRECTORY/func/deleteComponent.func.sh
-. $SCRIPT_DIRECTORY/func/initKathra.func.sh
-. $SCRIPT_DIRECTORY/func/keycloak.func.sh
-. $SCRIPT_DIRECTORY/func/misc.func.sh
-. $SCRIPT_DIRECTORY/func/init.jq.func.sh
-
 initInstallJQ || exit 1
-
-export KATHRA_CONTEXT_FILE=$HOME/.kathra-context
-printDebug "Context file: $KATHRA_CONTEXT_FILE"
 
 export DOMAIN_HOST=$(readEntryIntoFile "$KATHRA_CONTEXT_FILE" "DOMAIN_HOST")
 if [ "$DOMAIN_HOST" == "" ] || [ "$DOMAIN_HOST" == "null" ]
@@ -63,6 +53,13 @@ declare gitLabTokenUsername=$(curl --fail -s --header "PRIVATE-TOKEN: ${GITLAB_A
 [ "${gitLabTokenUsername}" == "" ] && printError "GitLab Token '${GITLAB_API_TOKEN}' doesn't work with https://${GITLAB_HOST}, unable to find user info" && exit 1
 printDebug "GitLab token is associated to user '$gitLabTokenUsername'"
 
+if [ "$1" == "login" ]
+then
+    kathraLogin $* || printError "Unable to login"
+    printInfo "You are logged in"
+    exit 0
+fi
+
 export TOKEN=$(readEntryIntoFile "$KATHRA_CONTEXT_FILE" "TOKEN")
 if [ ! "$TOKEN" == "" ] && [ ! "$TOKEN" == "null" ]
 then
@@ -77,7 +74,7 @@ then
     defineVar "USER_LOGIN" "Kathra user login"
     defineSecretVar "USER_PASSWORD" "Kathra user password"
     
-    getKeycloakToken $KEYCLOAK_HOST "$KEYCLOAK_CLIENT_REALM" "$USER_LOGIN" "$USER_PASSWORD" "$KEYCLOAK_CLIENT_ID" "$KEYCLOAK_CLIENT_SECRET" $TEMP_DIRECTORY/token
+    getKeycloakToken $KEYCLOAK_HOST "$KEYCLOAK_CLIENT_REALM" "$USER_LOGIN" "$USER_PASSWORD" "$KEYCLOAK_CLIENT_ID" "$KEYCLOAK_CLIENT_SECRET" $TEMP_DIRECTORY/token || exit 1
     export TOKEN=$(cat $TEMP_DIRECTORY/token)
     writeEntryIntoFile "$KATHRA_CONTEXT_FILE" "TOKEN" "$TOKEN"
 fi
