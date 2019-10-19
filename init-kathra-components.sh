@@ -1,5 +1,4 @@
 #!/bin/bash
-
 ##################################################################
 ## Init kathra's components into kathra
 ## @author Julien Boubechtoula

@@ -1,5 +1,4 @@
 #!/bin/bash
-
 function initInstallJQ() {
     command -v jq 2> /dev/null > /dev/null && return 0
     printDebug "Install jq"

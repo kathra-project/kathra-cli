@@ -1,7 +1,5 @@
 #!/bin/bash
 
-#pip install shyaml 2> /dev/null > /dev/null
-
 function kathraCreateComponent() {
     local swaggerFilePath=$1
     local componentName=$2
@@ -30,7 +28,6 @@ EOF
     local componentUUID=$(jq -r '.id' < ${temp}.post.response)
     printInfo "Component created with UUID : $componentUUID"
     waitUntilResourceIsReady "components" "$componentUUID" || return 1
-
     kathraCreateApiVersion $componentUUID ${swaggerFilePath} ${temp}.apiVersionCreated || return 1
     local apiVersionUUID=$(jq -r '.id' < ${temp}.apiVersionCreated)
     printInfo "ApiVersion created with UUID : $apiVersionUUID"
@@ -359,7 +356,7 @@ function createPipelineIntoPipelineManager() {
 	\"template\":\"${template}\",
 	\"credentialId\":\"${credentialId}\"
 }"
-    curl -s -X POST https://${PIPELINE_MANAGER_HOST}pipelines \
+    curl -s -X POST https://${PIPELINE_MANAGER_HOST}/api/v1/pipelines \
   -H 'Accept: application/json' \
   -H "Authorization: Bearer ${TOKEN}" \
   -H 'Cache-Control: no-cache' \
