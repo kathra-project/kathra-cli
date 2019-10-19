@@ -41,16 +41,34 @@ getVariableFromContextAndAskIfNotExist $KATHRA_CONTEXT_FILE "KEYCLOAK_CLIENT_ID"
 getVariableFromContextAndAskIfNotExist $KATHRA_CONTEXT_FILE "KEYCLOAK_CLIENT_SECRET" "Keycloak client secret" "184863e6-0b78-4df6-ae99-38b4003f6db5"
 getVariableFromContextAndAskIfNotExist $KATHRA_CONTEXT_FILE "KEYCLOAK_CLIENT_REALM" "Keycloak realm" "kathra"
 
+### CHECK JENKINS SETTINGS
 getVariableFromContextAndAskIfNotExist $KATHRA_CONTEXT_FILE "JENKINS_API_USER" "Jenkins's username ($JENKINS_HOST)" "kathra-pipelinemanager"
 getVariableFromContextAndAskIfNotExist $KATHRA_CONTEXT_FILE "JENKINS_API_TOKEN" "Jenkins's api token ($JENKINS_HOST)" ""
 declare jenkinsTokenUsername=$(curl --fail -XPOST --user ${JENKINS_API_USER}:${JENKINS_API_TOKEN} https://${JENKINS_HOST}/me/api/json 2> /dev/null | jq -r '.id')
-[ "${jenkinsTokenUsername}" == "" ] && printError "Jenkins Token '${JENKINS_API_TOKEN}' for user '${JENKINS_API_USER}' doesn't work with https://${JENKINS_HOST}, unable to find user info" && exit 1
+if [ "${jenkinsTokenUsername}" == "" ]
+then
+    while [ "${jenkinsTokenUsername}" == "" ]; do
+        printError "Jenkins Token '${JENKINS_API_TOKEN}' for user '${JENKINS_API_USER}' doesn't work with https://${JENKINS_HOST}, unable to find user info, edit $KATHRA_CONTEXT_FILE"
+        defineVar "JENKINS_API_TOKEN" "Jenkins's api token ($JENKINS_API_TOKEN)"
+        jenkinsTokenUsername=$(curl --fail -XPOST --user ${JENKINS_API_USER}:${JENKINS_API_TOKEN} https://${JENKINS_HOST}/me/api/json 2> /dev/null | jq -r '.id')
+    done
+    writeEntryIntoFile "$KATHRA_CONTEXT_FILE" "JENKINS_API_TOKEN" "$JENKINS_API_TOKEN"
+fi
 printDebug "Jenkins token is associated to user '$jenkinsTokenUsername'"
 
 
+### CHECK GITLAB SETTINGS
 getVariableFromContextAndAskIfNotExist $KATHRA_CONTEXT_FILE "GITLAB_API_TOKEN" "GitLab's api token ($GITLAB_HOST)" ""
 declare gitLabTokenUsername=$(curl --fail -s --header "PRIVATE-TOKEN: ${GITLAB_API_TOKEN}" "https://${GITLAB_HOST}/api/v4/user"  2> /dev/null | jq -r '.username')
-[ "${gitLabTokenUsername}" == "" ] && printError "GitLab Token '${GITLAB_API_TOKEN}' doesn't work with https://${GITLAB_HOST}, unable to find user info" && exit 1
+if [ "${gitLabTokenUsername}" == "" ]
+then
+    while [ "${gitLabTokenUsername}" == "" ]; do
+        printError "GitLab Token '${GITLAB_API_TOKEN}' doesn't work with https://${GITLAB_HOST}, unable to find user info, edit $KATHRA_CONTEXT_FILE"
+        defineVar "GITLAB_API_TOKEN" "GitLab's api token ($GITLAB_API_TOKEN)"
+        gitLabTokenUsername=$(curl --fail -s --header "PRIVATE-TOKEN: ${GITLAB_API_TOKEN}" "https://${GITLAB_HOST}/api/v4/user"  2> /dev/null | jq -r '.username')
+    done
+    writeEntryIntoFile "$KATHRA_CONTEXT_FILE" "GITLAB_API_TOKEN" "$GITLAB_API_TOKEN"
+fi
 printDebug "GitLab token is associated to user '$gitLabTokenUsername'"
 
 if [ "$1" == "login" ]
@@ -60,6 +78,7 @@ then
     exit 0
 fi
 
+### CHECK KEYCLOAK SETTINGS
 export TOKEN=$(readEntryIntoFile "$KATHRA_CONTEXT_FILE" "TOKEN")
 if [ ! "$TOKEN" == "" ] && [ ! "$TOKEN" == "null" ]
 then
@@ -74,8 +93,7 @@ then
     defineVar "USER_LOGIN" "Kathra user login"
     defineSecretVar "USER_PASSWORD" "Kathra user password"
     
-    getKeycloakToken $KEYCLOAK_HOST "$KEYCLOAK_CLIENT_REALM" "$USER_LOGIN" "$USER_PASSWORD" "$KEYCLOAK_CLIENT_ID" "$KEYCLOAK_CLIENT_SECRET" $TEMP_DIRECTORY/token || exit 1
+    getKeycloakToken $KEYCLOAK_HOST "$KEYCLOAK_CLIENT_REALM" "$USER_LOGIN" "$USER_PASSWORD" "$KEYCLOAK_CLIENT_ID" "$KEYCLOAK_CLIENT_SECRET" $TEMP_DIRECTORY/token
     export TOKEN=$(cat $TEMP_DIRECTORY/token)
     writeEntryIntoFile "$KATHRA_CONTEXT_FILE" "TOKEN" "$TOKEN"
 fi
-

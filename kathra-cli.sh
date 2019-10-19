@@ -1,11 +1,9 @@
 #!/bin/bash
-
 ##################################################################
 ## KATHRA CLI
 ## @author Julien Boubechtoula
 ## 
 ##################################################################
-
 export SCRIPT_DIRECTORY="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 export TEMP_DIRECTORY=/tmp/kathra-cli/
 export KATHRA_CONTEXT_FILE=$HOME/.kathra-context

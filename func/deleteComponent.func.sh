@@ -16,7 +16,6 @@ function kathraDeleteComponent() {
     jq -r '.implementations[] | .id ' < ${TEMP_DIRECTORY}/component.$uuid | xargs -I{} -n 1 -P 5  bash -c "kathraDeleteImplementation {} $purge"
 
     callResourceManager "DELETE" "components/$uuid" > /dev/null
-
     return $?
 }
 
@@ -85,18 +84,22 @@ function kathraDeletePipeline() {
     local purge=$2
     if [ "$purge" == "1" ]
     then
+        callResourceManager "GET" "pipelines/$1"
         local providerId=$(callResourceManager "GET" "pipelines/$1" | jq -r '.providerId')
-        [ "$providerId" == "null" ] && printWarn "Unable to find providerId for pipeline $1" || jenkinsDeleteJob "$JENKINS_HOST" "$JENKINS_API_TOKEN" "$providerId"
+        [ "$providerId" == "null" ] && printWarn "Unable to find providerId for pipeline $1" || jenkinsDeletePipeline "$JENKINS_HOST" "$JENKINS_API_TOKEN" "$providerId"
     fi
     callResourceManager "DELETE" "pipelines/$1" > /dev/null
 }
 export -f kathraDeletePipeline
 
-function jenkinsDeleteJob() {
+function jenkinsDeletePipeline() {
+    printDebug "jenkinsDeletePipeline($*)"
     local host=$1
     local token=$2
     local path=$3
     curl --fail -XPOST --user kathra-pipelinemanager:${token} https://${host}$(echo "${path}" | sed 's#/#/job/#g')/toDelete 2> /dev/null > /dev/null
-    return $?
+    local rc=$?
+    [ $rc -ne 0 ] && printError "Unable to delete pipeline : $path"
+    return $rc
 }
-export -f jenkinsDeleteJob
+export -f jenkinsDeletePipeline

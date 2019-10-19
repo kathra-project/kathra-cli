@@ -1,5 +1,4 @@
 #!/bin/bash
-
 function initKathraComponent() {
     local config=$1
     [ ! -f "$config" ] && printError "unable to find file $config" && exit 1
@@ -9,103 +8,101 @@ function initKathraComponent() {
     local gitHost=$(jq -r '.gitHost' < $config)
     local version=$(jq -r '.version' < $config)
     local pathApi=$(jq -r '.api' < $config)
-    local pathModel=$(jq -r '.model' < $config)
-    local pathClient=$(jq -r '.client' < $config)
-    local pathInterface=$(jq -r '.interface' < $config)
+    local groupName=$(jq -r '.groupName' < $config)
+    local implementationLang=$(jq -r '.implementationLang' < $config)
+    local apiFile=$(jq -r '.apiFile' < $config)
+    [ "$apiFile" == "null" ] && apiFile="swagger.yml"
+    local apiDir=${TEMP_DIRECTORY}/migrateRepositoryKathra.$componentName.api
+    local temp=${TEMP_DIRECTORY}/initKathraComponent.$(date +%s)
+    
+    [ -d $apiDir ] && rm -Rf $apiDir
+    git clone git@${gitHost}:${pathApi}.git $apiDir
+    cd $apiDir
+    [ ! -f $apiFile ] && printError "Unable find $apiFile into $apiDir" && return 1
+    
+    sed 's#version:\(.*\)-RC-SNAPSHOT#version:\1#g' < $apiFile | sed 's#version:\(.*\)-SNAPSHOT#version:\1#g' > $apiFile.fixedVersion
+    mv $apiFile.fixedVersion $apiFile
+    
+    # create component
+    local componentUUID="$(callResourceManager "GET" "components" | jq ".[] | select(.name==\"${componentName}\")" | jq -r '.id')"
+    [ "${componentUUID}" == "null" ] && componentUUID=""
+    [ "${componentUUID}" == "" ] && kathraCreateComponent ${apiFile} "$componentName" "$groupName" "$componentDescription"
+    componentUUID="$(callResourceManager "GET" "components" | jq ".[] | select(.name==\"${componentName}\")" | jq -r '.id')"
+    
+    importLibrariesForComponent "$componentUUID" "$config"
+    [ "${implementationName}" == "null" ] && implementationName=""
+    [ "${implementationName}" == "" ] && return 0
+    # create implementation
+    local implementationUUID="$(callResourceManager "GET" "implementations" | jq ".[] | select(.name==\"${implementationName}\")" | jq -r '.id')"
+    [ "${implementationUUID}" == "null" ] && implementationUUID=""
+    [ "${implementationUUID}" == "" ] && kathraCreateImplementation "$implementationName" "$componentUUID" "$version" "$implementationLang" "No description"
+    
+    local implementationRepositoryUUID=$(callAppManager GET "implementations" | jq -r ".[] | select(.name==\"${implementationName}\") | .sourceRepository.id")
+    callResourceManager GET "sourcerepositories/$implementationRepositoryUUID" > ${TEMP_DIRECTORY}/migrateRepositoryKathra.$implementationName.sourceRepository
+    
+    ## remove protected branch
+    local implementationRepositoryProviderId=$(jq -r '.providerId' < ${TEMP_DIRECTORY}/migrateRepositoryKathra.$implementationName.sourceRepository)
+    curl --request DELETE --header "PRIVATE-TOKEN: ${GITLAB_API_TOKEN}" "https://${GITLAB_HOST}/api/v4/projects/$implementationRepositoryProviderId/protected_branches/master"  2> /dev/null > /dev/null
+    ## Import implementation source code
+    local implementationRepositoryUrl=$(jq -r '.sshUrl' < ${TEMP_DIRECTORY}/migrateRepositoryKathra.$implementationName.sourceRepository)
     local pathImplementation=$(jq -r '.implementation' < $config)
-
-    local newPathApi="${teamPath}/components/$componentName/$componentName-api"
-    local newPathModel="${teamPath}/components/$componentName/JAVA/$componentName-model"
-    local newPathClient="${teamPath}/components/$componentName/JAVA/$componentName-client"
-    local newPathInterface="${teamPath}/components/$componentName/JAVA/$componentName-interface"
-    local newPathImplementation="${teamPath}/components/$componentName/implementations/$implementationName"
-
-    [ ! "${pathApi}" == "null" ] && migrateRepositoryKathra "${gitHost}" "${componentName}-api" "${pathApi}" "${newPathApi}" "${deployKey}"
-    [ ! "${pathModel}" == "null" ] && migrateRepositoryKathra "${gitHost}" "${componentName}-model" "${pathModel}" "${newPathModel}" "${deployKey}"
-    [ ! "${pathClient}" == "null" ] && migrateRepositoryKathra "${gitHost}" "${componentName}-client" "${pathClient}" "${newPathClient}" "${deployKey}"
-    [ ! "${pathInterface}" == "null" ] && migrateRepositoryKathra "${gitHost}" "${componentName}-interface" "${pathInterface}" "${newPathInterface}" "${deployKey}"
-    migrateRepositoryKathra "${gitHost}" "${implementationName}" "${pathImplementation}" "${newPathImplementation}" "${deployKey}"
+    local tmpDir=${TEMP_DIRECTORY}/mirrorRepositoryAndPush.$implementationName
+    [ -d ${TEMP_DIRECTORY}/mirrorRepositoryAndPush.$implementationName ] && rm -rf ${TEMP_DIRECTORY}/mirrorRepositoryAndPush.$implementationName
+    mirrorRepositoryAndPush "git@${gitHost}:${pathImplementation}.git" "${implementationRepositoryUrl}" "$tmpDir"
     
-    local componentConfigFile="${TEMP_DIRECTORY}/initKathraComponent.$componentName.post"
-
-    cat > "$componentConfigFile" << EOF
-{
-    "name": "${componentName}",
-    "description": "${componentDescription}",
-    "version": "${version}",
-    "status": "READY",
-    "metadata": {
-        "artifact-artifactName": "${componentName}",
-        "artifact-groupId": "${artifactGroupId}",
-        "groupId": "${deployKey}",
-        "groupPath": "${teamPath}"
-    },
-    "implementationRepositoryUrl" : "git@${GITLAB_HOST}:${newPathImplementation}.git",
-    "implementationName": "${implementationName}",
-    "implementationRepositoryPath" : "${newPathImplementation}",
-    "implementationPipelinePath" : "${jenkinsComponentsRootDir}/${componentName}/implementations/java/${implementationName}" 
+    return $?
 }
-EOF
-    if [ ! "${pathApi}" == "null" ] 
-    then
-        jq ".apiRepositoryPath = \"${newPathApi}\"" $componentConfigFile > $componentConfigFile.updated && mv $componentConfigFile.updated $componentConfigFile
-        jq ".apiRepositoryUrl = \"git@${GITLAB_HOST}:${newPathApi}.git\"" $componentConfigFile > $componentConfigFile.updated && mv $componentConfigFile.updated $componentConfigFile
-    fi
-    if [ ! "${pathModel}" == "null" ] 
-    then
-        jq ".modelRepositoryUrl = \"git@${GITLAB_HOST}:${newPathModel}.git\"" $componentConfigFile > $componentConfigFile.updated && mv $componentConfigFile.updated $componentConfigFile
-        jq ".modelRepositoryPath = \"${newPathModel}\"" $componentConfigFile > $componentConfigFile.updated && mv $componentConfigFile.updated $componentConfigFile
-        jq ".modelPipelinePath = \"${jenkinsComponentsRootDir}/${componentName}/${componentName}-model\"" $componentConfigFile > $componentConfigFile.updated && mv $componentConfigFile.updated $componentConfigFile
-    fi
-    if [ ! "${pathInterface}" == "null" ] 
-    then
-        jq ".interfaceRepositoryUrl = \"git@${GITLAB_HOST}:${newPathInterface}.git\"" $componentConfigFile > $componentConfigFile.updated && mv $componentConfigFile.updated $componentConfigFile
-        jq ".interfaceRepositoryPath = \"${newPathInterface}\"" $componentConfigFile > $componentConfigFile.updated && mv $componentConfigFile.updated $componentConfigFile
-        jq ".interfacePipelinePath = \"${jenkinsComponentsRootDir}/${componentName}/${componentName}-interface\"" $componentConfigFile > $componentConfigFile.updated && mv $componentConfigFile.updated $componentConfigFile
-    fi
-    if [ ! "${pathClient}" == "null" ] 
-    then
-        jq ".clientRepositoryUrl = \"git@${GITLAB_HOST}:${newPathClient}.git\"" $componentConfigFile > $componentConfigFile.updated && mv $componentConfigFile.updated $componentConfigFile
-        jq ".clientRepositoryPath = \"${newPathClient}\"" $componentConfigFile > $componentConfigFile.updated && mv $componentConfigFile.updated $componentConfigFile
-        jq ".clientPipelinePath = \"${jenkinsComponentsRootDir}/${componentName}/${componentName}-client\"" $componentConfigFile > $componentConfigFile.updated && mv $componentConfigFile.updated $componentConfigFile
-    fi
 
-    cat "$componentConfigFile"
-    kathraImportExistingComponent "$componentConfigFile"
+function importLibrariesForComponent() {
+    local componentUUID=$1
+    local config=$2
+    printDebug "importLibrariesForComponent(componentUUID: $componentUUID, config: $config)"
+
+    [ ! "$(jq -r '.javaModel' < $config)" == "null" ] && [ ! "$(jq -r '.javaModel' < $config)" == "" ]  && importLibrary "$componentUUID" "JAVA" "MODEL" "git@${gitHost}:$(jq -r '.javaModel' < $config)"
+    [ ! "$(jq -r '.javaInterface' < $config)" == "null" ] && [ ! "$(jq -r '.javaInterface' < $config)" == "" ]  && importLibrary "$componentUUID" "JAVA" "INTERFACE" "git@${gitHost}:$(jq -r '.javaInterface' < $config)"
+    [ ! "$(jq -r '.javaClient' < $config)" == "null" ] && [ ! "$(jq -r '.javaClient' < $config)" == "" ] && importLibrary "$componentUUID" "JAVA" "CLIENT" "git@${gitHost}:$(jq -r '.javaClient' < $config)"
+    
+    [ ! "$(jq -r '.pythonModel' < $config)" == "null" ] && [ ! "$(jq -r '.pythonModel' < $config)" == "" ]  && importLibrary "$componentUUID" "PYTHON" "MODEL" "git@${gitHost}:$(jq -r '.pythonModel' < $config)"
+    [ ! "$(jq -r '.pythonInterface' < $config)" == "null" ] && [ ! "$(jq -r '.pythonInterface' < $config)" == "" ]  && importLibrary "$componentUUID" "PYTHON" "INTERFACE" "git@${gitHost}:$(jq -r '.pythonInterface' < $config)"
+    [ ! "$(jq -r '.pythonClient' < $config)" == "null" ] && [ ! "$(jq -r '.pythonClient' < $config)" == "" ] && importLibrary "$componentUUID" "PYTHON" "CLIENT" "git@${gitHost}:$(jq -r '.javaClient' < $config)"
 }
-export -f initKathraComponent
+export -f importLibrariesForComponent
 
-
-function migrateRepositoryKathra() {
-    printDebug "migrateRepositoryKathra($*)"
-    local gitHostSrc=$1
-    local name=$2
-    local pathSrc=$3
-    local pathDest=$4
-    local deployKey=$5
-
+function importLibrary() {
+    local componentUUID=$1
+    local lang=$2
+    local type=$3
+    local gitSrc=$4
+    local temp=${TEMP_DIRECTORY}/importLibrary.$(date +%s)
+    printDebug "importLibrary(componentUUID: $componentUUID, lang: $lang, type: $type, gitSrc: $gitSrc)"
     
-    [ -d "${TEMP_DIRECTORY}/migrateRepositoryKathra.$name" ] && rm -Rf "${TEMP_DIRECTORY}/migrateRepositoryKathra.$name"
-    git clone --mirror git@${gitHostSrc}:${pathSrc}.git ${TEMP_DIRECTORY}/migrateRepositoryKathra.$name
-    [ $? -ne 0 ] && printError "Unable to pull git@${gitHostSrc}:${pathSrc}.git" && exit 1
-    
-
-
-    deleteRepositoryGitLab ${GITLAB_HOST} ${GITLAB_API_TOKEN} ${pathDest}
-
-    kathraCreateSourceRepositoryGitLab "${name}" "${pathDest}" "${deployKey}" "${TEMP_DIRECTORY}/kathraCreateSourceRepositoryGitLab.$name.created"
-
-    # remove protected branch
-    local sshUrl=$(jq -r '.sshUrl' < ${TEMP_DIRECTORY}/kathraCreateSourceRepositoryGitLab.$name.created)
-    local providerId=$(jq -r '.providerId' < ${TEMP_DIRECTORY}/kathraCreateSourceRepositoryGitLab.$name.created)
+    callResourceManager "GET" "libraries" | jq ".[] | select((.component.id==\"${componentUUID}\") and (.type==\"${type}\") and (.language==\"${lang}\"))" > $temp.libFound
+    local libUUID=$(jq -r '.id' < $temp.libFound)
+    [ "$libUUID" == "null" ] && printError "Unable to find library $lang / $type for component $componentUUID"
+    local libUuidSourceRepo=$(jq -r '.sourceRepository.id' < $temp.libFound)
+    [ "$libUuidSourceRepo" == "null" ] && printError "Unable to find sourceRepository for library $libUUID"
+    callResourceManager GET "sourcerepositories/$libUuidSourceRepo" > ${temp}.sourceRepository
+    local sshUrl=$(jq -r '.sshUrl' < ${temp}.sourceRepository)
+    local providerId=$(jq -r '.providerId' < ${temp}.sourceRepository)
+    echo "providerId:$providerId"
     curl --request DELETE --header "PRIVATE-TOKEN: ${GITLAB_API_TOKEN}" "https://${GITLAB_HOST}/api/v4/projects/$providerId/protected_branches/master"  2> /dev/null > /dev/null
-
-    cd ${TEMP_DIRECTORY}/migrateRepositoryKathra.$name 
-    printDebug "Push ${TEMP_DIRECTORY}/migrateRepositoryKathra.$name to $sshUrl"
-    git push -f --mirror ${sshUrl}
-    [ $? -ne 0 ] && printError "Unable to push to ${sshUrl}" && exit 1
+    mirrorRepositoryAndPush "$gitSrc" "$sshUrl" "$temp.migrateRepo"
 }
-export -f migrateRepositoryKathra
+export -f importLibrary
+
+function mirrorRepositoryAndPush() {
+    printDebug "mirrorRepositoryAndPush($*)"
+    local remoteSrc=$1
+    local remoteDest=$2
+    local tmp=$3
+    
+    git clone --mirror ${remoteSrc} $tmp
+    [ $? -ne 0 ] && printError "Unable to clone mirror from ${remoteSrc}" && exit 1
+    cd $tmp
+    git push -f --mirror ${remoteDest}
+    [ $? -ne 0 ] && printError "Unable to push mirror to ${remoteDest}" && exit 1
+}
+export -f mirrorRepositoryAndPush
 
 function deleteRepositoryGitLab() {
     printDebug "deleteRepositoryGitLab($*)"
