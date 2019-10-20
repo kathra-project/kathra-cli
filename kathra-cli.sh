@@ -59,8 +59,8 @@ case "${verb}" in
     
         declare propertiesToDisplay=(name id status)
         declare propertiesToDisplayFilter=$(echo ${propertiesToDisplay[*]} | tr ' ' '\n' | sed 's#\(.*\)#\1: .\1#g' | tr '\n' ',')
-        [ "${uuid}" == "" ] && callResourceManager "GET" "${resourceType}" | jq -r ".[] | {${propertiesToDisplayFilter}}"
-        [ ! "${uuid}" == "" ] && callResourceManager "GET" "${resourceType}/${uuid}" | jq
+        [ "${uuid}" == "" ] && callResourceManager "GET" "${resourceType}" | jq -r ".[] | {${propertiesToDisplayFilter}}" && exit 0
+        [ ! "${uuid}" == "" ] && callResourceManager "GET" "${resourceType}/${uuid}" | jq '.' && exit 0
     ;;
     delete)   
         case "${resourceType}" in
@@ -90,6 +90,5 @@ case "${verb}" in
         show_help   
     ;;
 esac   
-
 
 exit $?
