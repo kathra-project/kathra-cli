@@ -40,7 +40,7 @@ findInArgs '-h' $* > /dev/null && show_help && exit 0
 
 declare verb=$1
 declare resourceType=$2
-declare uuid=$3
+declare identifier=$3
 declare extra=$4
 
 
@@ -59,30 +59,38 @@ case "${verb}" in
     
         declare propertiesToDisplay=(name id status)
         declare propertiesToDisplayFilter=$(echo ${propertiesToDisplay[*]} | tr ' ' '\n' | sed 's#\(.*\)#\1: .\1#g' | tr '\n' ',')
-        [ "${uuid}" == "" ] && callResourceManager "GET" "${resourceType}" | jq -r ".[] | {${propertiesToDisplayFilter}}" && exit 0
-        [ ! "${uuid}" == "" ] && callResourceManager "GET" "${resourceType}/${uuid}" | jq '.' && exit 0
+
+        [ "${identifier}" == "" ] && callResourceManager "GET" "${resourceType}" | jq -r ".[] | {${propertiesToDisplayFilter}}" && exit 0
+
+        if [[ ${identifier//-/} =~ ^[[:xdigit:]]{32}$ ]]; then
+            uuid=$identifier
+        else
+            callResourceManager "GET" "${resourceType}" | jq ".[] | select(.name==\"${identifier}\")" > ${TEMP_DIRECTORY}.resourceUUID
+            uuid="$(jq -r '.id' < ${TEMP_DIRECTORY}.resourceUUID)"
+        fi
+        callResourceManager "GET" "${resourceType}/${uuid}" | jq '.' && exit 0
     ;;
     delete)   
         case "${resourceType}" in
             components)   
                 declare purge=0
                 findInArgs "--purge" $* 2> /dev/null > /dev/null && purge=1 || purge=0
-                kathraDeleteComponent "${uuid}" $purge
+                kathraDeleteComponent "${identifier}" $purge
             ;;
             implementations)   
                 declare purge=0
                 findInArgs "--purge" $* 2> /dev/null > /dev/null && purge=1 || purge=0
-                kathraDeleteImplementation "${uuid}" $purge
+                kathraDeleteImplementation "${identifier}" $purge
             ;;
         esac  
     ;;
     patch)   
-        callResourceManager "PATCH" "${resourceType}/${uuid}" "${extra}" | jq
+        callResourceManager "PATCH" "${resourceType}/${identifier}" "${extra}" | jq
     ;;
     import) 
         case "${resourceType}" in
             components)   
-                kathraImportExistingComponent "${uuid}"
+                kathraImportExistingComponent "${identifier}"
             ;;
         esac   
     ;;
