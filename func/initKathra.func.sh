@@ -78,9 +78,11 @@ function importLibrary() {
     
     callResourceManager "GET" "libraries" | jq ".[] | select((.component.id==\"${componentUUID}\") and (.type==\"${type}\") and (.language==\"${lang}\"))" > $temp.libFound
     local libUUID=$(jq -r '.id' < $temp.libFound)
-    [ "$libUUID" == "null" ] && printError "Unable to find library $lang / $type for component $componentUUID"
+    [ "$libUUID" == "null" ] && libUUID=""
+    [ "$libUUID" == "" ] && printError "Unable to find library $lang / $type for component $componentUUID"
     local libUuidSourceRepo=$(jq -r '.sourceRepository.id' < $temp.libFound)
-    [ "$libUuidSourceRepo" == "null" ] && printError "Unable to find sourceRepository for library $libUUID"
+    [ "$libUuidSourceRepo" == "null" ] && libUuidSourceRepolibUUID=""
+    [ "$libUuidSourceRepo" == "" ] && printError "Unable to find sourceRepository for library $libUUID"
     callResourceManager GET "sourcerepositories/$libUuidSourceRepo" > ${temp}.sourceRepository
     local sshUrl=$(jq -r '.sshUrl' < ${temp}.sourceRepository)
     local providerId=$(jq -r '.providerId' < ${temp}.sourceRepository)

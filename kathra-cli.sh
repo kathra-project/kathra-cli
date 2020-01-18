@@ -14,7 +14,7 @@ export VERSION="1.0.0-RC-SNAPSHOT"
 
 printDebug "Context file: $KATHRA_CONTEXT_FILE"
 
-export resourceTypesExistings=( components apiversions implementations librairies pipelines sourcerepositories groups keypairs implementationversions )
+export resourceTypesExistings=( components apiversions implementations libraries pipelines sourcerepositories groups keypairs implementationversions catalogentries catalogentrypackages )
 
 function show_help() {
     printInfo "KATHRA CLI"
@@ -116,9 +116,12 @@ case "${verb}" in
         [ "$uuid" == "" ] && exit 1
         case "${resourceType}" in
             components)   
-                callResourceManager "DELETE" "${resourceType}/${uuid}" | jq '.' && exit 0
+                callAppManager "DELETE" "${resourceType}/${uuid}" | jq '.' && exit 0
             ;;
             implementations)   
+                callAppManager "DELETE" "${resourceType}/${uuid}" | jq '.' && exit 0
+            ;;
+            *)
                 callResourceManager "DELETE" "${resourceType}/${uuid}" | jq '.' && exit 0
             ;;
         esac  
