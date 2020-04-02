@@ -41,7 +41,7 @@ export -f kathraCreateComponent
 
 function kathraCreateImplementation() {
     local implementationName=$1
-    local versionImplementation="1.0.0"
+    local versionImplementation="1.1.0"
     local componentIdentifier=$2
     local versionApi=$3
     local language=$4

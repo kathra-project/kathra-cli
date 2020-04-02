@@ -191,7 +191,7 @@ function generateConfigFile() {
         cat > $file.item.$componentName << EOF
 {
     "componentName": "${componentName}",
-    "version": "1.0.0-RC-SNAPSHOT",
+    "version": "1.1.0",
     "implementationName": "${implementationName}",
     "relativePath": "KATHRA/kathra-services/kathra-${componentName}/kathra-${componentName}",
     "api" : "KATHRA/kathra-services/kathra-${componentName}/kathra-${componentName}-api",
