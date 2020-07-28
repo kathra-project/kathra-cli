@@ -52,10 +52,23 @@ findInArgs '-h' $* > /dev/null && show_help && exit 0
 
 . $SCRIPT_DIRECTORY/conf.sh
 
-declare verb=$1
-declare resourceType=$2
-declare identifier=$3
-declare extra=$4
+
+
+function getTypeResourceFromAlias() {
+    local type=$1
+    declare search=$(echo ${aliasTR[${type}]:-MISSING})
+    [ "$search" == "MISSING" ] && return 1
+    echo $search && return 0
+}
+
+function getVerb() {
+    findInArgs 'get' $* > /dev/null && echo 'get' && return 0
+    findInArgs 'create' $* > /dev/null && echo 'create' && return 0
+    findInArgs 'delete' $* > /dev/null && echo 'delete' && return 0
+    findInArgs 'patch' $* > /dev/null && echo 'patch' && return 0
+    findInArgs 'import' $* > /dev/null && echo 'import' && return 0
+    findInArgs 'edit' $* > /dev/null && echo 'edit' && return 0
+}
 
 function resolvIfIdentifierIsNameOrUUID() {
     local resourceType=$1
@@ -70,24 +83,77 @@ function resolvIfIdentifierIsNameOrUUID() {
     return 0
 }
 
-function getTypeResourceFromAlias() {
-    local type=$1
-    local -A aliasTR;
+function getTypeResource() {
+    declare -A aliasTR;
     aliasTR[c]="components";
     aliasTR[com]="components";
     aliasTR[component]="components";
+    aliasTR[components]="components";
     aliasTR[a]="apiversions";
     aliasTR[api]="apiversions";
     aliasTR[apiversion]="apiversions";
+    aliasTR[apiversions]="apiversions";
     aliasTR[i]="implementations";
     aliasTR[imp]="implementations";
+    aliasTR[implementation]="implementations";
     aliasTR[implementations]="implementations";
-    declare search=$(echo ${aliasTR[${type}]:-MISSING})
-    [ "$search" == "MISSING" ] && return 1
-    echo $search && return 0
+    aliasTR[library]="libraries";
+    aliasTR[libraries]="libraries";
+    aliasTR[pipeline]="pipelines";
+    aliasTR[pipelines]="pipelines";
+    aliasTR[sourcerepository]="sourcerepositories";
+    aliasTR[sourcerepositories]="sourcerepositories";
+    aliasTR[group]="groups";
+    aliasTR[groups]="groups";
+    aliasTR[keypair]="keypairs";
+    aliasTR[keypairs]="keypairs";
+    aliasTR[implementationversion]="implementationversions";
+    aliasTR[implementationversions]="implementationversions";
+    aliasTR[binaryrepository]="binaryrepositories";
+    aliasTR[binaryrepositories]="binaryrepositories";
+    aliasTR[catalogentry]="catalogentries";
+    aliasTR[catalogentries]="catalogentries";
+    aliasTR[catalogentry]="catalogentries";
+    aliasTR[catalogentrypackage]="catalogentrypackages";
+    aliasTR[catalogentrypackages]="catalogentrypackages";
+    for i in "${!aliasTR[@]}"
+    do
+        findInArgs $i $* > /dev/null && echo ${aliasTR[$i]} && return 0
+    done
+    return 1
 }
 
-[[ ! " ${resourceTypesExistings[@]} " =~ " ${resourceType} " ]] && resourceType=$(getTypeResourceFromAlias ${resourceType})
+function getUUID() {
+    for uuid in "$@"
+    do
+        [[ ${uuid//-/} =~ ^[[:xdigit:]]{32}$ ]] && echo $uuid && return 0
+    done
+}
+
+function getFormat() {
+    findInArgs "-o" $* && return 0
+    findInArgs "--out" $* && return 0
+    echo "json"
+}
+
+function format() {
+    [ "$format" == "yaml" ] && json2yaml && return 0
+    jq && return 0
+}
+export -f format
+
+function unformat() {
+    [ "$format" == "yaml" ] && yaml2json - && return 0
+    jq && return 0
+}
+export -f unformat
+
+declare verb=$(getVerb $*)
+declare resourceType=$(getTypeResource $*)
+declare identifier=$(getUUID $*)
+declare extra=$4
+declare format=$(getFormat $*)
+
 [ "$resourceType" == "" ] && printError "Unable to find type of resource, use help" && exit
 
 case "${verb}" in
@@ -102,31 +168,38 @@ case "${verb}" in
         esac  
     ;;
     get)   
-    
         declare propertiesToDisplay=(name id status)
         declare propertiesToDisplayFilter=$(echo ${propertiesToDisplay[*]} | tr ' ' '\n' | sed 's#\(.*\)#\1: .\1#g' | tr '\n' ',')
-
-        [ "${identifier}" == "" ] && callResourceManager "GET" "${resourceType}" | jq -r ".[] | {${propertiesToDisplayFilter}}" && exit 0
+        echo $propertiesToDisplayFilter
+        [ "${identifier}" == "" ] && callResourceManager "GET" "${resourceType}" | jq -r ".[] | {${propertiesToDisplayFilter}}" | format && exit 0
         declare uuid=$(resolvIfIdentifierIsNameOrUUID "${resourceType}" "$identifier")
         [ "$uuid" == "" ] && exit 1
-        callResourceManager "GET" "${resourceType}/${uuid}" | jq '.' && exit 0
+        callResourceManager "GET" "${resourceType}/${uuid}" | jq '.' | format && exit 0
+    ;;
+    edit)
+        declare uuid=$(resolvIfIdentifierIsNameOrUUID "${resourceType}" "$identifier")
+        [ "$uuid" == "" ] && exit 1
+        callResourceManager "GET" "${resourceType}/${uuid}" | jq '.' | format > $TEMP_DIRECTORY/${resourceType}.${identifier}.$format
+        cp $TEMP_DIRECTORY/${resourceType}.${identifier}.$format $TEMP_DIRECTORY/${resourceType}.${identifier}.$format.origin
+        vim $TEMP_DIRECTORY/${resourceType}.${identifier}.$format
+        cmp -s "$TEMP_DIRECTORY/${resourceType}.${identifier}.$format.origin" "$TEMP_DIRECTORY/${resourceType}.${identifier}.$format" && printInfo "Resource ${resourceType}/${uuid} unmodified" && exit 0
+        unformat < $TEMP_DIRECTORY/${resourceType}.${identifier}.$format > $TEMP_DIRECTORY/${resourceType}.${identifier}.json 
+        callResourceManager "PUT" "${resourceType}/${uuid}" "$( cat $TEMP_DIRECTORY/${resourceType}.${identifier}.json)" > /dev/null && printInfo "Resource ${resourceType}/${uuid} updated" && exit 0
     ;;
     delete)   
-        declare uuid=$(resolvIfIdentifierIsNameOrUUID "${resourceType}" "$identifier")
-        [ "$uuid" == "" ] && exit 1
         case "${resourceType}" in
             components)   
-                callResourceManager "DELETE" "${resourceType}/${uuid}" | jq '.' && exit 0
+                callResourceManager "DELETE" "${resourceType}/${identifier}" | jq '.' | format && exit 0
             ;;
             implementations)   
-                callResourceManager "DELETE" "${resourceType}/${uuid}" | jq '.' && exit 0
+                callResourceManager "DELETE" "${resourceType}/${identifier}" | jq '.' | format && exit 0
             ;;
         esac  
     ;;
     patch)   
         declare uuid=$(resolvIfIdentifierIsNameOrUUID "${resourceType}" "$identifier")
         [ "$uuid" == "" ] && exit 1
-        callResourceManager "PATCH" "${resourceType}/${uuid}" "${extra}" | jq
+        callResourceManager "PATCH" "${resourceType}/${uuid}" "${extra}" | jq | format && exit 0
     ;;
     import) 
         case "${resourceType}" in
