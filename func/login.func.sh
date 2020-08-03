@@ -1,6 +1,7 @@
 #!/bin/bash
 
 function kathraLogin() {
+    printDebug "kathraLogin($*)"
     declare USER_LOGIN="$(findInArgs '--username' $*)"
     declare USER_PASSWORD="$(findInArgs '--password' $*)"
 
