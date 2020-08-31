@@ -170,7 +170,6 @@ case "${verb}" in
     get)   
         declare propertiesToDisplay=(name id status)
         declare propertiesToDisplayFilter=$(echo ${propertiesToDisplay[*]} | tr ' ' '\n' | sed 's#\(.*\)#\1: .\1#g' | tr '\n' ',')
-        echo $propertiesToDisplayFilter
         [ "${identifier}" == "" ] && callResourceManager "GET" "${resourceType}" | jq -r ".[] | {${propertiesToDisplayFilter}}" | format && exit 0
         declare uuid=$(resolvIfIdentifierIsNameOrUUID "${resourceType}" "$identifier")
         [ "$uuid" == "" ] && exit 1
