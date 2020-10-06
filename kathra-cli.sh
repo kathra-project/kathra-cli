@@ -7,14 +7,16 @@
 export SCRIPT_DIRECTORY="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 export TEMP_DIRECTORY=/tmp/kathra-cli/
 export KATHRA_CONTEXT_FILE=$HOME/.kathra-context
-export VERSION="1.1.0"
+export VERSION="1.2.0"
 [ ! -d $TEMP_DIRECTORY ] && mkdir $TEMP_DIRECTORY
 
 . $SCRIPT_DIRECTORY/func/imports.sh
 
+findInArgs '--debug' $* > /dev/null && DEBUG=1
+
 printDebug "Context file: $KATHRA_CONTEXT_FILE"
 
-export resourceTypesExistings=( components apiversions implementations librairies pipelines sourcerepositories groups keypairs implementationversions )
+export resourceTypesExistings=( components apiversions implementations librairies pipelines sourcerepositories groups keypairs implementationversions binaryrepositories catalogentries catalogentrypackages )
 
 function show_help() {
     printInfo "KATHRA CLI"

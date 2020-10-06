@@ -57,7 +57,7 @@ function printInfo(){
 }
 export -f printInfo
 function printDebug(){
-    echo -e "\033[94;1m $* \033[0m" 1>&2
+    [ "$DEBUG" == "1" ] && echo -e "\033[94;1m $* \033[0m" 1>&2
 }
 export -f printDebug
 

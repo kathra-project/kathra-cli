@@ -1,6 +1,7 @@
 #!/bin/bash
 
 initInstallJQ || exit 1
+initInstallJson2yaml || exit 1
 
 export DOMAIN_HOST=$(readEntryIntoFile "$KATHRA_CONTEXT_FILE" "DOMAIN_HOST")
 if [ "$DOMAIN_HOST" == "" ] || [ "$DOMAIN_HOST" == "null" ]

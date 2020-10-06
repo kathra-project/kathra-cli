@@ -4,7 +4,7 @@ info:
   title: Run
   version: 1.0.0
   x-groupId: fr.my-team
-  x-artifactName: run-example
+  x-artifactName: runexample
 
 paths:
   /run/{name}:
